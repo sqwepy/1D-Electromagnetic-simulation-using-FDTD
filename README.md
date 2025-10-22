@@ -1,1 +1,88 @@
 # 1D-Electromagnetic-simulation-using-FDTD
+
+All of this was done with a nice little explaining of: https://www.youtube.com/watch?v=S-6Z8N-30AU
+
+This is the summary of the video:
+
+Deriving the algorithm with the Maxwell equations:
+
+\begin{align}
+\nabla \times \mathbf{E} &= -\,\mu\,\frac{\partial \mathbf{H}}{\partial t} \quad &&\text{(Faraday's law)} \\[6pt]
+\nabla \times \mathbf{H} &= \mathbf{J} + \varepsilon\,\frac{\partial \mathbf{E}}{\partial t} \quad &&\text{(Ampère–Maxwell law)} \\[6pt]
+\nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon} \quad &&\text{(Gauss's law for electricity)} \\[6pt]
+\nabla \cdot \mathbf{H} &= 0 \quad &&\text{(Gauss's law for magnetism)}
+\end{align}
+
+After looking at the Maxwell equations we see that the equations (3) and (4) are not necessary for our numerical simulation, hence we will be left with: 
+
+\begin{align}
+\nabla \times \mathbf{E} &= -\,\mu\,\frac{\partial \mathbf{H}}{\partial t} \quad &&\text{(Faraday's law)} \\[6pt]
+\nabla \times \mathbf{H} &= \mathbf{J} + \varepsilon\,\frac{\partial \mathbf{E}}{\partial t} \quad &&\text{(Ampère–Maxwell law)} \\[6pt]
+\end{align}
+
+We now know that the an approximation of the derivative is:
+\begin{align}
+\frac{df}{dx}(x_0) 
+&= \lim_{h \to 0} \frac{f\!\left(x_0 + \tfrac{h}{2}\right) - f\!\left(x_0 - \tfrac{h}{2}\right)}{h} \\[6pt]
+&= \lim_{\Delta x \to 0} \frac{f\!\left(x_0 + \tfrac{\Delta x}{2}\right) - f\!\left(x_0 - \tfrac{\Delta x}{2}\right)}{\Delta x} \\[6pt]
+&\approx \frac{f\!\left(x_0 + \tfrac{\Delta x}{2}\right) - f\!\left(x_0 - \tfrac{\Delta x}{2}\right)}{\Delta x},
+\quad \Delta x \ll 1
+\end{align}
+
+Now we can also shift this derivative by $+\tfrac{\Delta x}{2}$ and get: 
+
+\begin{align}
+\frac{df}{dx}(x_0+\tfrac{\Delta x}{2})
+&\approx \frac{f\!\left(x_0 + \Delta x\right) - f\!\left(x_0\right)}{\Delta x},
+\quad \Delta x \ll 1
+\end{align}
+
+Now we want to use this derivatives to simplify our maxwell equations. For this we first need to think of a grid in space and time we want to use. One way as demonstrated in the video is to changingly look at H and E with a difference of $\tfrac{\Delta x}{2}$ and so we will be looking at H in every half step in time and space and we will look at E on every whole step in time and space. This means that we will start with the initial condition of $E(0)$ and then look at $H(\tfrac{\Delta x}{2})$ then look at $E(\Delta x)$ and so on.
+
+The last thing that we now need, is the maxwell equations in 1D as the curl is usually a 3D operator. We now only look at an x polarized electric field, which means $E_y = E_z = 0$ and we will only assume that the EM-wave only propagates in the y direction (k_y). Note that with this the magnetic field obviously has to be polarized in the z direction. With this the curl of the electric field is for example: $$\nabla \times E = (0,0,-\tfrac{\partial E_x}{\partial y})$$ adn the magnetic field becomes: $$\nabla \times H = (\tfrac{\partial H_z}{\partial y},0,0)$$
+
+With all of these simplifications our new maxwell equations become:
+\begin{align}
+\boxed{\;\frac{\partial H_z}{\partial t}=\frac{1}{\mu}\,\frac{\partial E_x}{\partial y}\;} \\[6pt]
+\boxed{\;\frac{\partial E_x}{\partial t}=\frac{1}{\varepsilon}\,\frac{\partial H_z}{\partial y}\;}
+\end{align}
+
+Lets now talk about the last thing missing, the parametrization of the derivatives and the Yee grid.
+WWe know $H_z(y)$ is defined at half steps $(t + \tfrac{\Delta t}{2}, y + \tfrac{\Delta y}{2})$ and $E_x(y)$ is defined at whole steps $(t,y)$. Now we just say that $y$ and $t$ can be parametrized with $j\,\Delta y$ and $n\,\Delta t$ where n and j are independent integer steps. With this we can then say that e.g. $H_z(y + \tfrac{\Delta y}{2}) = H_z(\Delta y\,(j + \tfrac{1}{2}))$ and $E_x(y) = H_z(j\,\Delta y)$. To simplify this halfstep and step thing we will now just shift the j and n index with $-\tfrac{1}{2}$.
+
+With inserting all of this and with a little math we get this:
+
+\begin{align}
+\boxed{\;H_z(j,n) = H_z(j,n-1)+\frac{\Delta t}{\mu \Delta y} \left(E_x(j+1,n)-E_x(j,n)\right);} \\[6pt]
+\boxed{\;E_x(j,n+1) = E_x(j,n) + \frac{\Delta t}{\epsilon \Delta y} \left(H_z(j,n)-H_z(j-1,n)\right)\;}
+\end{align}
+
+So at every time $n < n_\mathrm{max}$, we will first calculate every $j$ (for the magnetic field from $0$ to $j_\mathrm{max}-1$ for the electric field from $1$ to $j_\mathrm{max}$) and the proceed to the next $n$ until we reach $n_\mathrm{max}$.
+
+The initial values for j = 0 and n = 0 are really important. Usually $E(j=1, n=0) = 0$ and $ B(j=0, n=-1) = 0$, but this can result in everything just being zero, so it depends on the case.
+
+Another useful thing to think about is the scale, to keep things as realistic as possible, we have the definiton of the speed of light $c$, with it and the definition of $\mu_0$ we can get our $\epsilon_0$ via $c = \sqrt{(\frac{1}{\mu_0 \epsilon_0})}$ and the velocity of the light wave in a medium can obiously then be obtained by looking at the index $n$ of the medium or with the $\epsilon$ and $\mu$ of that medium.
+
+Now lets talk about the stepsize, we can not choose and arbitrary step size, because the step size has obviously some restrains, the stepsize for $\Delta x$ must be much smaller than the wavelength for example $\Delta x <= \frac{\lambda_\mathrm{min}}{20}$ the min is only important if we dont look at a monochromatic wave. and with $\Delta x$ we can now obviously easily calculate the upper limit for $\Delta t$ with $\Delta t <= \frac{\Delta x}{c}$. Or if we look at an thin film (almost the only thing we can simulate) we also have the additional condition $\Delta x <= \frac{d}{20}$, because we obviously want the wave to go through the film and not skip simulating it.
+
+If we want to define boundary conditions we have to choose $\Delta t = \frac{\Delta x}{c}$ and with this we get the mur absorbing boundary conditions (probably just a periodic condition, because the EMwave is obv. periodic):
+$$E_x(j=0,n+1) = E_x(j=1,n)$$
+$$H_z(j_\mathrm{max,n}) = H_z(j_\mathrm{max}-1,n-1)$$
+
+We now will talk about our source, so we will talk about our initial E-field $E_0(t)$. We can for example take a modulated gaussian wave:
+$$E_0(t) = \exp{\left(-\frac{(t-t_0)^2}{\tau^2}\right)} \cdot \sin{(\omega_0 t)} $$
+
+We then also need $H_0(t)$, but for this we will need to define the Impedance $Z = \sqrt{(\frac{\mu}{\epsilon})}$, because if we dont introduce that, the waves will propagate in both directions, in the positive and negative directions:
+
+$$H_0(t) = \frac{1}{Z}\exp{\left(-\frac{(t-t_0)^2}{\tau^2}\right)} \cdot \sin{(\omega_0 t)} $$
+
+With the source, we get our complete set of equations:
+
+\begin{align}
+\boxed{\;H_z(j,n) = H_z(j,n-1)+\frac{\Delta t}{\mu \Delta y} \left(E_x(j+1,n)-E_x(j,n)\right);} \\[6pt]
+\boxed{\;H_z(j_\mathrm{source}-1,n) = H_z(j_\mathrm{source}-1,n) - H_0(t=n) \;}\\[6pt]
+\boxed{\;E_x(j,n+1) = E_x(j,n) + \frac{\Delta t}{\epsilon \Delta y} \left(H_z(j,n)-H_z(j-1,n)\right)\;}\\[6pt]
+\boxed{\;E_x(j_\mathrm{source},n+1) = E_x(j_\mathrm{source},n+1) + E_0(t=n+1) \;}
+\end{align}
+
+Here $j_\mathrm{source}$, is the position of the source in our y direction.
