@@ -11,14 +11,14 @@ imp0 = np.sqrt(mu0/eps0)
 
 j_max = 1000  #size of y
 n_max = 2000  #size of t
-j_source = 10 #space step of j_source
+j_source = 500 #space step of j_source
 
 # values for other than vakuum, epsilon (eps) also can be an array of permativities in the y direction for every step, mu also can be so
 
 mu = mu0
 eps = np.ones(j_max)*eps0
-eps[250:350] = 10*eps0
-eps[650:750] = 20*eps0
+eps[0:250] = 1000*eps0
+eps[750:] = 1000*eps0
 v = 1/np.sqrt(eps*mu)
 imp = np.sqrt(mu/eps)
 
@@ -43,6 +43,16 @@ def Source_Func(t):
     lambda_0 = 550e-9  #defines the frequency of the source
     w0 = 2*np.pi*c/lambda_0 
     return np.exp(-(t-t_0)**2/tau**2)*np.sin(w0*t*dt)
+
+def Source_Func_alt(t):
+    #tau = 30   # in time steps
+    #t_0 = tau*3     # delay for source to work
+    lambda_0 = 550e-9  #defines the frequency of the source
+    w0 = 2*np.pi*c/lambda_0 
+    if t < 50:
+        return np.sin(w0*t*dt)
+    else:
+        return 0
 
 # Set up the figure and axis
 fig, ax = plt.subplots()
@@ -77,10 +87,8 @@ def update(frame):
 
     # Update the line data
     line.set_ydata(E_x)
-
     return line,
 
 # Create the animation
-ani = FuncAnimation(fig, update, frames=n_max, interval=10, blit=True)
-
+ani = FuncAnimation(fig, update, frames=n_max, interval=10, blit=True, repeat = False)
 plt.show()
