@@ -11,14 +11,14 @@ imp0 = np.sqrt(mu0/eps0)
 
 j_max = 1000  #size of y
 n_max = 2000  #size of t
-j_source = 500 #space step of j_source
+j_source = 100 #space step of j_source
 
 # values for other than vakuum, epsilon (eps) also can be an array of permativities in the y direction for every step, mu also can be so
 
 mu = mu0
 eps = np.ones(j_max)*eps0
-eps[0:250] = 1000*eps0
-eps[750:] = 1000*eps0
+#eps[0:250] = 1000*eps0
+eps[500:600] = 10*eps0
 v = 1/np.sqrt(eps*mu)
 imp = np.sqrt(mu/eps)
 
