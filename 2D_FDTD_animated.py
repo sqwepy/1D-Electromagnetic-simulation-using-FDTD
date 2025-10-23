@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
+from tqdm import tqdm
 #Constants
 
 eps0 = 8.8541878128e-12
@@ -10,7 +10,7 @@ c = 1/np.sqrt(eps0*mu0)
 imp0 = np.sqrt(mu0/eps0)
 j_max = 500  #size of y
 i_max = 500 #size of z
-n_max = 2000  #size of t
+n_max = 4000  #size of t
 j_source = 250 #space step of j_source
 i_source = 250 #space step of i_source
 
@@ -18,7 +18,11 @@ i_source = 250 #space step of i_source
 
 mu = mu0
 eps = eps0*np.ones(shape=(i_max,j_max))
-eps[100:200,100:200] = 10*eps0
+eps[100:150, 100:150] = 10*eps0
+eps[350:400, 100:150] = 10*eps0
+eps[100:150, 350:400] = 10*eps0
+eps[350:400, 350:400] = 10*eps0
+
 material_prof = eps > eps0
 
 v = 1/np.sqrt(eps*mu)
@@ -53,12 +57,12 @@ def Source_Func(t):
 #MATPLOT LIB ANIMATION PLOT SETUP
 
 fig, ax = plt.subplots(figsize=(6,5))
-im = ax.imshow(E_x.T, origin='lower', cmap='RdBu', interpolation='quadric',
-               vmin=-0.05, vmax=0.05)
-cb = plt.colorbar(im, ax=ax, label=r'$E_x$ amplitude')
+im = ax.imshow(np.abs(E_x.T), origin='lower', cmap='magma', interpolation='quadric',
+               vmin=0, vmax=0.02)
+cb = plt.colorbar(im, ax=ax, label=r'$|E_x|$')
 
 # static overlay for material
-overlay = ax.imshow(material_prof.T, origin='lower', cmap='Greys', alpha=0.15,
+overlay = ax.imshow(material_prof.T, origin='lower', cmap='Greys', alpha=0.015,
                     interpolation='nearest')
 title = ax.set_title('t = 0')
 ax.set_xlabel('y-index')
@@ -113,6 +117,15 @@ def fdtd_step(n):
     E_x[i_max-1, :] = E_x_old[i_max-2, :] + coef_z*(E_x[i_max-2, :] - E_x_old[i_max-1, :])
 
 steps_per_frame = 1
+
+nframes = n_max // steps_per_frame
+pbar = tqdm(total=nframes, desc="Saving MP4", unit="frame")
+
+def _progress(frame_idx, total):
+    # frame_idx goes 0..total-1
+    pbar.n = frame_idx + 1
+    pbar.refresh()
+    
 def update(frame):
     # advance multiple FDTD steps per frame
     base_n = frame * steps_per_frame
@@ -124,5 +137,12 @@ def update(frame):
 
 ani = FuncAnimation(fig, update, frames=n_max // steps_per_frame,
                     interval=20, blit=True)
-
+ani.save(
+    "2D_fdtd_mur_1st_deg_em_wave.mp4",        # filename
+    writer="ffmpeg",           # backend (needs ffmpeg installed)
+    fps=30,                    # frames per second
+    dpi=300,                    # resolution
+    progress_callback=_progress,
+)
+pbar.close()
 plt.show()
